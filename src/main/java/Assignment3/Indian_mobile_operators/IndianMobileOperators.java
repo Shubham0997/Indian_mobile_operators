@@ -39,9 +39,7 @@ public class IndianMobileOperators {
 	private static Logger log = LogManager.getLogger(IndianMobileOperators.class.getName()); // Logger Method Object
 	static Connection connection = null;
 	
-	
-	
-	//main method
+
 	public static void main(String[] args) throws Exception {
 		try {
 			// initialize resources
@@ -83,8 +81,8 @@ public class IndianMobileOperators {
 	
 	
 	/**
-	 * @param connection
-	 * @param databaseName
+	 * @param connection : Connection to the server
+	 * @param databaseName 
 	 * @throws Exception
 	 *  following function checks for database existence, if exists, it will return a connection otherwise will create a database
 	 */
@@ -146,7 +144,7 @@ public class IndianMobileOperators {
 
 	/**
 	 * 
-	 * @param connection
+	 * @param connection : Connection to the database
 	 * @throws Exception
 	 * this method creates 2 tables, one with mobile_operator data and another with the messages
 	 */
@@ -178,7 +176,7 @@ public class IndianMobileOperators {
 	
 	/**
 	 * 
-	 * @param connection
+	 * @param connection : connection to the database
 	 * @throws Exception
 	 * below method populates mobile_operators table with operator information
 	 */
@@ -240,7 +238,7 @@ public class IndianMobileOperators {
 	
 	
 	/**
-	 * @param connection
+	 * @param connection : connection to the database
 	 * @throws Exception
 	 * below method populates messages table with pre-defined values
 	 */
@@ -275,7 +273,7 @@ public class IndianMobileOperators {
 	
 
 	/**
-	 * @param connection
+	 * @param connection : connection to the database
 	 * @throws Exception
 	 * below method populates messages table by taking user inputs
 	 */
@@ -360,7 +358,7 @@ public class IndianMobileOperators {
 
 	
 	/**
-	 * @param connection
+	 * @param connection : connection to the server
 	 * @param databaseName
 	 * @throws Exception
 	 * following method executes the queries in the assignment 
