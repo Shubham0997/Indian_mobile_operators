@@ -228,8 +228,8 @@ public class IndianMobileOperators {
 			ps.executeBatch();
 			log.info("Table mobile_operators populated");
 
-			populateMessages(connection);
-			//populateMessagesTable(connection);
+			populateMessages(connection);  //comment this line and uncomment //populateMessagesTable(connection); if inputs are needed to be taken in console. 
+			//populateMessagesTable(connection); //comment this line and uncomment //populateMessages(connection); if pre-defined inputs are required. 
 		} catch (Exception e) {
 			throw new Exception(e+ "	Exception occured while populating mobile_operator tables");
 		}
