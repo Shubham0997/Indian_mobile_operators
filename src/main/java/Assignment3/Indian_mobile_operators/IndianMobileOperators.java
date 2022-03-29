@@ -62,7 +62,7 @@ public class IndianMobileOperators {
 			// execute the queries as per the assignment
 			executeAssignmentQueries(connection,databaseName); 
 
-			connection.close();
+			
 		} catch (Exception e) {
 			log.fatal("Exception occured : " + e);
 		}
@@ -75,6 +75,10 @@ public class IndianMobileOperators {
 			ResourceInitializer.initializeFile();
 		} catch (Exception e) {
 			throw new Exception("Config not loaded");
+		}finally {
+			if(connection != null) {
+				connection.close();
+			}
 		}
 	}
 	
