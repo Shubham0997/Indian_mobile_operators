@@ -27,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
 import java.text.SimpleDateFormat;
@@ -68,9 +69,8 @@ public class IndianMobileOperators {
 			if(connection != null) {
 				connection.close();
 			}
-			
 
-	}
+		}
 	}
 
 
@@ -97,60 +97,91 @@ public class IndianMobileOperators {
 			//fetching database metadata
 			DatabaseMetaData databaseMetadata = connection.getMetaData(); 
 			
-			// check if "mobile_operators" table exists
-			log.info("Checking if 'mobile_operators' table exists");
-			ResultSet tables = databaseMetadata.getTables(null, null, "mobile_operators", null);
+			// check if "operator_range" table exists
+			log.info("Checking if 'operator_range' table exists");
+			ResultSet tables = databaseMetadata.getTables(null, null, "operator_range", null);
 			if (tables.next()) {
-				log.info("Table 'mobile_operators' exists");
+				log.info("Table 'operator_range' exists");
+			} else {
+				log.info("Table 'operator_range' doesn't exists.");
+				createOperatorRangeTable(connection);
+			}
+
+			// check if "operator_region" table exists
+			log.info("Checking if 'operator_region' table exists");
+			tables = databaseMetadata.getTables(null, null, "operator_region", null);
+			if (tables.next()) {
+				log.info("Table 'operator_region' exists");
 			}
 			else {
-				log.info("Table 'mobile_operators' doesn't exists, creating...");
-				createMobileOperatorTable(connection);
+				log.info("Table 'operator_region' doesn't exists.");
+				createOperatorRegionTable(connection);
 			}
 	
+			
 			//checking if 'messages' table exists
 			log.info("Checking if 'messages' table exists");
 			tables = databaseMetadata.getTables(null, null, "messages", null);
 			if (tables.next()) {
-				log.info("Table 'mobile_operators' exists");
+				log.info("Table 'messages' exists");
 			}
 			else {
-				log.info("Table 'mobile_operators' doesn't exists");
+				log.info("Table 'messages' doesn't exists");
 				createMessagesTable(connection);
 			}
 			
-	
 		}catch(Exception e) {
-			throw new Exception(e+ "	Exception occured while checking/creating database");
+			throw new Exception(e+ "	Exception occured while checking/creating tables");
 		}
 		
 	}
 	
-	
-
 	/**
 	 * 
 	 * @param connection : Connection to the database
 	 * @throws Exception
 	 * this method create 'mobile_operators' table and further call for method to populate it
 	 */
-	public static void createMobileOperatorTable(Connection connection) throws Exception {
+	public static void createOperatorRangeTable(Connection connection) throws Exception {
 		
 			try(Statement statement = connection.createStatement();){
 
-			log.info("Creating mobile_operators table"); //creating mobile_oeprators table which will contain mobile operator data
-			String sql = "CREATE TABLE mobile_operators " + "(Ranges INTEGER, " + " Operators VARCHAR(255), "
-					+ " Region VARCHAR(255), " + " PRIMARY KEY ( Ranges ))";
+			log.info("Creating operator_range table"); //creating operator_range table which will contain mobile operator ranges
+			String sql = "CREATE TABLE operator_range " + "(Ranges INTEGER, " + "Operators VARCHAR(255), " + " PRIMARY KEY ( Ranges ))";
 			statement.execute(sql);
 
-			//populating data table which will contain mobile operator data, i.e ranges, operators, regions
-			populateOperatorDataTable(connection);
+			//populating operator_range table which will contain operator_ranges with ID
+			populateOperatorRangeTable(connection);
 			
 		}catch(Exception e) {
 			throw new Exception(e+ "	Exception occured while creating tables");
 		}
 	}
 	
+	
+	/**
+	 * 
+	 * @param connection : Connection to the database
+	 * @throws Exception
+	 * this method create 'operator_region' table and further call for method to populate it
+	 */
+	public static void createOperatorRegionTable(Connection connection) throws Exception {
+		
+			try(Statement statement = connection.createStatement();){
+
+			log.info("Creating operator_region table"); //creating operator_region table which will contain mobile operator data
+			String sql = "CREATE TABLE operator_region " + "(Region_code INTEGER, " + " Region VARCHAR(255), " + " PRIMARY KEY ( Region_code ))";
+			statement.execute(sql);
+
+			//populating operator_region table which will contain operator regions
+			populateOperatorRegionTable(connection);
+			
+		}catch(Exception e) {
+			throw new Exception(e+ "	Exception occured while creating tables");
+		}
+	}
+	
+
 	
 	/**
 	 * @param connection : Connection to the database
@@ -164,14 +195,12 @@ public class IndianMobileOperators {
 		
 			log.info("Creating tables messages"); //creating messages table which will contain messages and their details.
 			String sql = "CREATE TABLE messages " + "(sms_From BIGINT, " + " sms_to BIGINT, " + " message VARCHAR(255),"
-					+ " from_Operators VARCHAR(255), " + " from_region VARCHAR(255), " + " to_Operators VARCHAR(255), "
-					+ " to_region VARCHAR(255)," + " sent_time DATETIME," + " received_time DATETIME,"
+					+ " sent_time DATETIME," + " received_time DATETIME,"
 					+ " delivery_status VARCHAR(255) " + " )";
 			statement.execute(sql);
 
-			//populating data table which will contain mobile operator data, i.e ranges, operators, regions
-			populateMessages(connection);  //comment this line and uncomment //populateMessagesTable(connection); if inputs are needed to be taken in console. 
-			//populateMessagesTable(connection); //comment this line and uncomment //populateMessages(connection); if pre-defined inputs are required. 
+			//populating messages table
+			populateMessages(connection); 
 			
 		}catch(Exception e) {
 			throw new Exception(e+ "	Exception occured while creating tables");
@@ -183,59 +212,71 @@ public class IndianMobileOperators {
 	 * 
 	 * @param connection : connection to the database
 	 * @throws Exception
-	 * below method populates mobile_operators table with operator information
+	 * below method populates operator_range table with operator ranges
 	 */
-	public static void populateOperatorDataTable(Connection connection) throws Exception {
+	public static void populateOperatorRangeTable(Connection connection) throws Exception {
+	
+		try (PreparedStatement ps = connection.prepareStatement("insert into operator_range values(?,?)");) {
+
+			// code below populates mobile_operators table with operator information
+			log.info("Adding Airtel, Idea, Jio, BSNL Information...");
+
+				// adding airtel range
+				ps.setInt(1, 9872);
+				ps.setString(2, "Airtel");
+				ps.addBatch();
+
+				// adding Idea range
+				ps.setInt(1, 9814);
+				ps.setString(2, "Idea");
+				ps.addBatch();
+
+				// adding Jio range
+				ps.setInt(1, 7018);
+				ps.setString(2, "Jio");
+				ps.addBatch();
+
+				// adding BSNL range
+				ps.setInt(1, 9878);
+				ps.setString(2, "BSNL");
+				ps.addBatch();
+			
+			ps.executeBatch();
+			log.info("Table operator_range populated");
+
+		
+		} catch (Exception e) {
+			throw new Exception(e+ "	Exception occured while populating operator_range tables");
+		}
+	}
+	
+	/**
+	 * 
+	 * @param connection : connection to the database
+	 * @throws Exception
+	 * below method populates operator_region table with operator regions
+	 */
+	public static void populateOperatorRegionTable(Connection connection) throws Exception {
 		// String array containing region names to be entered.
 		String[] regions = new String[] { "Punjab", "Himachal Pradesh", "Delhi", "Haryana", "Uttarakhand",
 				"Uttar Pradesh", "Rajasthan", "Maharashtra", "Karnataka", "Gujarat" }; 
 
-		try (PreparedStatement ps = connection.prepareStatement("insert into mobile_operators values(?,?,?)");) {
+		try (PreparedStatement ps = connection.prepareStatement("insert into operator_region values(?,?)");) {
 
 			// code below populates mobile_operators table with operator information
-			log.info("Adding Airtel, Idea, Jio, BSNL Information...");
-			int airtelRange = 98720;
-			int ideaRange = 98140;
-			int jioRange = 70180;
-			int bsnlRange = 98780;
-
-			for (int i = 0; i < regions.length; i++) {
-
-				// adding airtel range
-				ps.setInt(1, airtelRange);
-				ps.setString(2, "Airtel");
-				ps.setString(3, regions[i]);
+		
+			for(int i=0;i<regions.length;i++) {
+				ps.setInt(1, i);
+				ps.setString(2, regions[i]);
 				ps.addBatch();
-				airtelRange++;
-
-				// adding Idea range
-				ps.setInt(1, ideaRange);
-				ps.setString(2, "Idea");
-				ps.setString(3, regions[i]);
-				ps.addBatch();
-				ideaRange++;
-
-				// adding Jio range
-				ps.setInt(1, jioRange);
-				ps.setString(2, "Jio");
-				ps.setString(3, regions[i]);
-				ps.addBatch();
-				jioRange++;
-
-				// adding BSNL range
-				ps.setInt(1, bsnlRange);
-				ps.setString(2, "BSNL");
-				ps.setString(3, regions[i]);
-				ps.addBatch();
-				bsnlRange++;
 			}
-
+			
 			ps.executeBatch();
-			log.info("Table mobile_operators populated");
+			log.info("Table operator_region populated");
 
 		
 		} catch (Exception e) {
-			throw new Exception(e+ "	Exception occured while populating mobile_operator tables");
+			throw new Exception(e+ "	Exception occured while populating operator_region tables");
 		}
 	}
 	
@@ -251,22 +292,22 @@ public class IndianMobileOperators {
 		
 		try(Statement statement= connection.createStatement();){
 
-		statement.addBatch("insert into messages values(9872900001, 9814900001,'This is message 2',(select operators from mobile_operators where ranges=98729),(select region from mobile_operators where ranges=98729 ),(select operators from mobile_operators where ranges=98149),(select region from mobile_operators where ranges=98149),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 7018938283,'This is message 1',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=70189),(select region from mobile_operators where ranges=70189),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814183756, 9872623947,'This is message 3',(select operators from mobile_operators where ranges=98141),(select region from mobile_operators where ranges=98141),(select operators from mobile_operators where ranges=98726),(select region from mobile_operators where ranges=98726),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814034342, 7018648324,'This is message 4',(select operators from mobile_operators where ranges=98140),(select region from mobile_operators where ranges=98140),(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(9878691251, 9814538238,'This is message 5',(select operators from mobile_operators where ranges=98786),(select region from mobile_operators where ranges=98786),(select operators from mobile_operators where ranges=98145),(select region from mobile_operators where ranges=98145),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9872930493, 9878349412,'This is message 6',(select operators from mobile_operators where ranges=98729),(select region from mobile_operators where ranges=98729),(select operators from mobile_operators where ranges=98783),(select region from mobile_operators where ranges=98783),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9878349412,'This is message 7',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=98783),(select region from mobile_operators where ranges=98783),CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(9872727211, 9814902322,'This is message 8',(select operators from mobile_operators where ranges=98727),(select region from mobile_operators where ranges=98727),(select operators from mobile_operators where ranges=98149),(select region from mobile_operators where ranges=98149),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9878593493, 7018012820,'This is message 9',(select operators from mobile_operators where ranges=98785),(select region from mobile_operators where ranges=98785),(select operators from mobile_operators where ranges=70180),(select region from mobile_operators where ranges=70180),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814723923, 7018723923,'This is message 10',(select operators from mobile_operators where ranges=98147),(select region from mobile_operators where ranges=98147),(select operators from mobile_operators where ranges=70187),(select region from mobile_operators where ranges=70187),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9878723484, 7018937289,'This is message 11',(select operators from mobile_operators where ranges=98787),(select region from mobile_operators where ranges=98787),(select operators from mobile_operators where ranges=70189),(select region from mobile_operators where ranges=70189),CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 12',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=98144),(select region from mobile_operators where ranges=98144),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 13',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=98144),(select region from mobile_operators where ranges=98144),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 14',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=98144),(select region from mobile_operators where ranges=98144),CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 15',(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),(select operators from mobile_operators where ranges=98144),(select region from mobile_operators where ranges=98144),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9872034342, 7018648324 ,'This is message 16',(select operators from mobile_operators where ranges=98720),(select region from mobile_operators where ranges=98720),(select operators from mobile_operators where ranges=70186),(select region from mobile_operators where ranges=70186),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9872900001, 9814900001,'This is message 2',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(7018648324, 7018938283,'This is message 1',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9814183756, 9872623947,'This is message 3',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9814034342, 7018648324,'This is message 4',CURRENT_TIMESTAMP,NULL,'Failed')");
+		statement.addBatch("insert into messages values(9878691251, 9814538238,'This is message 5',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9872930493, 9878349412,'This is message 6',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(7018648324, 9878349412,'This is message 7',CURRENT_TIMESTAMP,NULL,'Failed')");
+		statement.addBatch("insert into messages values(9872727211, 9814902322,'This is message 8',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9878593493, 7018012820,'This is message 9',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9814723923, 7018723923,'This is message 10',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9878723484, 7018937289,'This is message 11',CURRENT_TIMESTAMP,NULL,'Failed')");
+		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 12',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 13',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 14',CURRENT_TIMESTAMP,NULL,'Failed')");
+		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 15',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		statement.addBatch("insert into messages values(9872034342, 7018648324 ,'This is message 16',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
 		
 		statement.executeBatch();
 		}catch(Exception e) {
@@ -275,91 +316,6 @@ public class IndianMobileOperators {
 	}
 	
 	
-
-	/**
-	 * @param connection : connection to the database
-	 * @throws Exception
-	 * below method populates messages table by taking user inputs
-	 */
-	public static void populateMessagesTable(Connection connection) throws Exception {
-		
-		try(PreparedStatement ps=connection.prepareStatement("insert into messages values(?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)");){
-		
-		Statement statement= connection.createStatement();
-		
-		BufferedReader br=new BufferedReader(new InputStreamReader(System.in));  
-		
-		log.info("Enter the number of messages : ");
-		int numberOfMessages = Integer.parseInt(br.readLine());  // reading number of messages
-		
-		long senderNumber;
-		long receiverNumber;
-		String message;
-		String deliveryStatus;
-		
-		//Entering messages by taking input in the console
-		for(int i=1;i<=numberOfMessages;i++) {
-			
-			log.info("Enter the Sender's phone number : ");
-			senderNumber= Long.parseLong(br.readLine());
-			
-			log.info("Enter the Receiver's phone number : ");
-			receiverNumber= Long.parseLong(br.readLine());
-			
-			log.info("Enter the message : ");
-			message = br.readLine();  
-		
-			//split the phone number to get first 5 character to check the range an operator of the numbers
-			String sendersNumber= String.valueOf(senderNumber);
-			sendersNumber=sendersNumber.substring(0, (sendersNumber.length()/2));
-			
-			String receiversNumber=String.valueOf(receiverNumber);
-			receiversNumber=receiversNumber.substring(0, (receiversNumber.length()/2));
-			
-			//fetching the operator and region of the sender
-			ResultSet rs= statement.executeQuery("select operators,region from mobile_operators where ranges="+sendersNumber+"");
-			rs.next();
-			String operator1=rs.getString(1);
-			String region1=rs.getString(2);
-			
-			//fetching the operator and region of the receiver
-			ResultSet rs2= statement.executeQuery("select operators,region from mobile_operators where ranges="+receiversNumber+"");
-			rs2.next();
-			String operator2=rs2.getString(1);
-			String region2=rs2.getString(2);
-	
-			
-			log.info("Enter the delivery status : ");
-			deliveryStatus = br.readLine();  
-
-			//setting fields for prepared statement
-			ps.setLong(1, senderNumber);
-			ps.setLong(2, receiverNumber);
-			ps.setString(3, message);
-			ps.setString(4, operator1);
-			ps.setString(5, region1);
-			ps.setString(6, operator2);
-			ps.setString(7, region2);
-			ps.setString(8, deliveryStatus);
-			
-			ps.addBatch();
-			log.info("**********************");
-		}
-		
-		ps.executeBatch(); 
-		log.info("Records added successfuly");  
-		
-		//setting received_time as NULL for failed delivery_status 
-		int result=statement.executeUpdate("UPDATE messages SET received_time=NULL where delivery_status='Failed'");  
-		log.info(result+" records affected"); 
-		
-		}catch(Exception e) {
-			throw new Exception(e+ "	Exception occured while populating messages tables");
-		}
-		
-	}
-	
-
 	
 	/**
 	 * @param connection : connection to the server
@@ -369,91 +325,14 @@ public class IndianMobileOperators {
 	 */
 	public static void executeAssignmentQueries(Connection connection) throws Exception {
 		
-//			Statement statement = connection.createStatement();
-//
-//			String selectDatabase = "USE " + databaseName; //selecting database
-//		    statement.executeUpdate(selectDatabase);
-//		    log.info("Database selected successfully");   
-//		    log.info("**************************************");
-//		    
-//		    
-//			// print messages from a given number
-//			log.info("Query 1: Print all messages sent from a given number. ");
-//			String query = "Select message from messages where sms_from=7018648324";
-//			ResultSet rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			//print messages to a given number
-//			log.info("Query 2: Print all messages to a given number. ");
-//			query = "Select message from messages where sms_to=9878349412";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			//Print all messages from a given number to a given number
-//			log.info("Query 3: Print all messages sent between two years. ");
-//			query = "Select message from messages where YEAR(sent_time) BETWEEN 2021 AND 2022";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			// Print all messages received by given number from punjab number
-//			log.info("Query 4: Print all messages receieved by given number from punjab number. ");
-//			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab'";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			//Print all messages received by given number from airtel punjab number.
-//			log.info("Query 5: Print all messages receieved by given number from airtel punjab number. ");
-//			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab' AND from_Operators='Airtel'";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			//Print all messages sent by 98786912**
-//			log.info("Query 6: Print all messages sent by 98786912** . ");
-//			query = "Select message from messages where sms_from>9878691200 AND sms_from<=9878691299";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//
-//			//Print all messages sent from punjab but failed .
-//			log.info("Query 7: Print all messages sent from punjab but failed . ");
-//			query = "Select message from messages where from_region='Punjab' AND delivery_status='Failed'";
-//			rs = statement.executeQuery(query);
-//			while (rs.next()) {
-//				log.info("Message : " + rs.getString("message"));
-//			}
-//
-//			log.info("**************************************");
-//			
-//			
-			
-			try(Scanner sc = new Scanner(System.in);){
+			Statement statement = connection.createStatement();
+			BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));  
+			try(Scanner scReader = new Scanner(System.in);){
 			int userChoice;
 			
+			//infinite loop which will break if userChoice==0, otherwise will execute queries according to the selected number
 			do {
-			
+				log.info("***************************************************************************************");
 				log.info("Enter the number with respect to the operation : ");
 				log.info("***************************************************************************************");
 				log.info("(1) Enter 1 to Print all messages sent from a given number. ");
@@ -465,31 +344,31 @@ public class IndianMobileOperators {
 				log.info("(7) Enter 7 to Print all messages sent from punjab but failed . ");
 				log.info("(8) Enter 0 to exit. ");
 				log.info("***************************************************************************************");
-				userChoice = sc.nextInt(); 
+				userChoice = scReader.nextInt(); 
 				
 				if(userChoice==1) {
-
-					messagesSentFromNumber();
+					
+					messagesSentFromNumber(connection,statement,reader);
 				}else if(userChoice ==2) {
 					
-					messagesSentToNumber();
+					messagesSentToNumber(connection,statement,reader);
 				}else if(userChoice ==3) {
 					
-					messageSentBetweenTwoYears();
+					messageSentBetweenTwoYears(connection,statement,scReader);
 				}else if(userChoice ==4) {
 					
-					 messageReceivedFromPunjab();
+					 messageReceivedFromPunjab(connection,statement,reader);
 				}else if(userChoice ==5) {
 					
-					messageReceivedFromAirtelPunjab();
+					messageReceivedFromAirtelPunjab(connection,statement,reader);
 				}else if(userChoice ==6) {
 					
-					messageSentBy98786912();
+					messageSentBy98786912(connection,statement,reader,scReader);
 				}else if(userChoice ==7) {
 					
-					messageFromPunjabFailed();
+					messageFromPunjabFailed(connection,statement,reader);
 				}else if(userChoice ==0) {
-					log.info("You have entered 0, Exiting");
+					log.info("You have entered 0, execution ended.");
 					break;
 				}else {
 					log.info("You have entered "+ userChoice+ " which is a wrong input.");
@@ -504,26 +383,150 @@ public class IndianMobileOperators {
 		}
 	}
 	
-	public static void messagesSentFromNumber() {
+	/**
+	 * 
+	 * @param connection 
+	 * @param statement 
+	 * @param reader
+	 * @throws Exception
+	 * this function fetches messages sent from a number
+	 */
+	public static void messagesSentFromNumber(Connection connection, Statement statement,BufferedReader reader) throws Exception {
 		log.info("You have entered 1");
+		log.info("Enter the sender's number : ");
+		//sample input= 7018648324
+		long sender=Long.parseLong(reader.readLine());
+		
+		String query = "Select message from messages where sms_from="+sender;
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messagesSentToNumber() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @throws Exception
+	 * This function fetches messages received by a number
+	 */
+	public static void messagesSentToNumber(Connection connection, Statement statement,BufferedReader reader) throws Exception {
 		log.info("You have entered 2");
+		log.info("Enter receiver's number : ");
+		//sample input= 7018648324
+		long receiver=Long.parseLong(reader.readLine());
+		
+		String query = "Select message from messages where sms_to="+receiver;
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messageSentBetweenTwoYears() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @throws Exception
+	 * This function fetches messages sent between 2 years
+	 */
+	public static void messageSentBetweenTwoYears(Connection connection, Statement statement,Scanner reader) throws Exception{
 		log.info("You have entered 3");
+		//sample input: 2021 2022
+		log.info("Enter year 1 : ");
+		int year1= reader.nextInt();
+		log.info("Enter year 2 : ");
+		int year2= reader.nextInt();
+		
+		String query = "Select message from messages where YEAR(sent_time) BETWEEN "+year1+ " AND " +year2;
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messageReceivedFromPunjab() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @throws Exception
+	 * This function fetches messages sent from punjab
+	 */
+	public static void messageReceivedFromPunjab(Connection connection, Statement statement,BufferedReader reader) throws Exception{
 		log.info("You have entered 4");
+		log.info("Enter receiver's number : ");
+		//sample input : 7018648324
+		long receiver=Long.parseLong(reader.readLine());
+		String query = "Select a.message from messages a inner join operator_region b on substring(a.sms_from,5,1) = b.region_code where a.sms_to="+receiver+" and b.region='Punjab'";
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messageReceivedFromAirtelPunjab() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @throws Exception
+	 * This function fetches messages sent from punjab and airtel
+	 */
+	public static void messageReceivedFromAirtelPunjab(Connection connection, Statement statement,BufferedReader reader) throws Exception{
 		log.info("You have entered 5");
+		log.info("Enter receiver's number : ");
+		//sample input : 7018648324
+		long receiver=Long.parseLong(reader.readLine());
+		String query = "Select a.message from messages a inner join operator_region b inner join operator_range c on "
+				+"substring(a.sms_from,5,1) = b.region_code and substring(a.sms_from,1,4)=c.ranges where a.sms_to="+receiver+" and b.region='Punjab' and c.operators='Airtel'";
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messageSentBy98786912() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @param scReader
+	 * @throws Exception
+	 * This function fetches message sent by 98786912 followed by two digit user inputs and received by a number
+	 */
+	public static void messageSentBy98786912(Connection connection, Statement statement,BufferedReader reader,Scanner scReader) throws Exception{
 		log.info("You have entered 6");
+		//sample input: 51 , 9814538238
+		log.info("Enter sender's last 2 digits : ");
+		int twoDigits=scReader.nextInt();
+		log.info("Enter receiver's number : ");
+		long receiver=Long.parseLong(reader.readLine());
+		
+		String query = "Select message from messages where sms_from=98786912"+twoDigits+" AND sms_to="+receiver;
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
 	}
-	public static void messageFromPunjabFailed() {
+	
+	/**
+	 * 
+	 * @param connection
+	 * @param statement
+	 * @param reader
+	 * @throws Exception
+	 * This function fetches messages sent from punjab and failed
+	 */
+	public static void messageFromPunjabFailed(Connection connection, Statement statement,BufferedReader reader) throws Exception{
 		log.info("You have entered 7");
+		String query = "Select a.message from messages a inner join operator_region b on substring(a.sms_from,5,1) = b.region_code where b.region='Punjab' and a.delivery_status='Failed'";
+		ResultSet rs = statement.executeQuery(query);
+		displayMessages(rs);
+
+	}
+	
+	/**
+	 * 
+	 * @param queryResult
+	 * @throws Exception
+	 * This function displays messages, fetched by queries
+	 */
+	public static void displayMessages(ResultSet queryResult) throws Exception {
+		while (queryResult.next()) {
+			log.info("Message : " + queryResult.getString("message"));
+		}
 	}
 	
 	
