@@ -29,7 +29,7 @@ public class ResourceInitializer {
 	
 	
 	//return properties values
-	public static String getResource(String property) {
+	public static String getResourceValue(String property) {
 		
 		return configFile.getProperty(property);
 	}

@@ -36,6 +36,7 @@ import java.util.Scanner;
 
 public class IndianMobileOperators {
 
+
 	private static Logger log = LogManager.getLogger(IndianMobileOperators.class.getName()); // Logger Method Object
 	static Connection connection = null;
 	
@@ -45,28 +46,31 @@ public class IndianMobileOperators {
 			// initialize resources
 			initializeResource();
 			 // read url value from config.properties
-			String url = ResourceInitializer.getResource("url");
+			String url = ResourceInitializer.getResourceValue("url");
 			// read user value from config.properties
-			String username = ResourceInitializer.getResource("user"); 
+			String username = ResourceInitializer.getResourceValue("user"); 
 			 // read password value from config.properties
-			String password = ResourceInitializer.getResource("password");
+			String password = ResourceInitializer.getResourceValue("password");
 
-			// database name
-			String databaseName = "indian_mobile_operators"; 
-
+		
 			Connection connection = DriverManager.getConnection(url, username, password);
 			
-			// check for database existence, create one and populate if not found. Returned connection will be stored in connection
-			checkDatabase(connection, databaseName);
+			// check for Table existence, create and populate if not found.
+			checkTableExistence(connection);
 			
 			// execute the queries as per the assignment
-			executeAssignmentQueries(connection,databaseName); 
+			executeAssignmentQueries(connection); 
 
 			
 		} catch (Exception e) {
 			log.fatal("Exception occured : " + e);
-		}
+		}finally {
+			if(connection != null) {
+				connection.close();
+			}
+			
 
+	}
 	}
 
 
@@ -75,69 +79,47 @@ public class IndianMobileOperators {
 			ResourceInitializer.initializeFile();
 		} catch (Exception e) {
 			throw new Exception("Config not loaded");
-		}finally {
-			if(connection != null) {
-				connection.close();
-			}
 		}
 	}
-	
+		
 	
 	
 	/**
 	 * @param connection : Connection to the server
 	 * @param databaseName 
 	 * @throws Exception
-	 *  following function checks for database existence, if exists, it will return a connection otherwise will create a database
+	 *  following function checks for tables existence, if doesn't exist, it will create and further call functions to populate them
 	 */
-	public static void checkDatabase(Connection connection, String databaseName) throws Exception {
+	public static void checkTableExistence(Connection connection) throws Exception {
 		
 		try{
-
-			if (connection != null) {
-				log.info("Checking if a database exists. ");
-				 // getting database metadata
-				ResultSet databaseResultSet = connection.getMetaData().getCatalogs();
-
-				boolean databaseExists = false;
-
-				while (databaseResultSet.next()) {
-					// store database name in catalogs string
-					String catalogs = databaseResultSet.getString(1); 
-
-					if (databaseName.equals(catalogs)) { // true if database found
-
-						databaseExists = true;
-						break;
-						
-					} else {
-						databaseExists = false;
-					}
-				}
-
-				log.info("Database exist : " + databaseExists);
-				Statement statement = connection.createStatement();
-				if (databaseExists == false) { 
-					// part executed if no database found, New database will be created
-					log.info("Databse not found, creating database...");
-					
-					//creating database
-					String sql = "CREATE DATABASE " + databaseName; 
-					statement.executeUpdate(sql);
-					log.info("Database " + databaseName + " created!");
-					
-					//selecting database
-			         String selectDatabase = "USE " + databaseName; 
-			         statement.executeUpdate(selectDatabase);
-			         log.info("Database selected successfully");   	
-			         
-			      // this method will populate the database, i.e tables will be created 
-					createTables(connection); 
-				}
 			
-				
-				
+			//fetching database metadata
+			DatabaseMetaData databaseMetadata = connection.getMetaData(); 
+			
+			// check if "mobile_operators" table exists
+			log.info("Checking if 'mobile_operators' table exists");
+			ResultSet tables = databaseMetadata.getTables(null, null, "mobile_operators", null);
+			if (tables.next()) {
+				log.info("Table 'mobile_operators' exists");
 			}
+			else {
+				log.info("Table 'mobile_operators' doesn't exists, creating...");
+				createMobileOperatorTable(connection);
+			}
+	
+			//checking if 'messages' table exists
+			log.info("Checking if 'messages' table exists");
+			tables = databaseMetadata.getTables(null, null, "messages", null);
+			if (tables.next()) {
+				log.info("Table 'mobile_operators' exists");
+			}
+			else {
+				log.info("Table 'mobile_operators' doesn't exists");
+				createMessagesTable(connection);
+			}
+			
+	
 		}catch(Exception e) {
 			throw new Exception(e+ "	Exception occured while checking/creating database");
 		}
@@ -150,22 +132,15 @@ public class IndianMobileOperators {
 	 * 
 	 * @param connection : Connection to the database
 	 * @throws Exception
-	 * this method creates 2 tables, one with mobile_operator data and another with the messages
+	 * this method create 'mobile_operators' table and further call for method to populate it
 	 */
-	public static void createTables(Connection connection) throws Exception {
-		try  {
-			Statement statement = connection.createStatement();
+	public static void createMobileOperatorTable(Connection connection) throws Exception {
+		
+			try(Statement statement = connection.createStatement();){
 
 			log.info("Creating mobile_operators table"); //creating mobile_oeprators table which will contain mobile operator data
 			String sql = "CREATE TABLE mobile_operators " + "(Ranges INTEGER, " + " Operators VARCHAR(255), "
 					+ " Region VARCHAR(255), " + " PRIMARY KEY ( Ranges ))";
-			statement.execute(sql);
-
-			log.info("Creating tables messages"); //creating messages table which will contain messages and their details.
-			sql = "CREATE TABLE messages " + "(sms_From BIGINT, " + " sms_to BIGINT, " + " message VARCHAR(255),"
-					+ " from_Operators VARCHAR(255), " + " from_region VARCHAR(255), " + " to_Operators VARCHAR(255), "
-					+ " to_region VARCHAR(255)," + " sent_time DATETIME," + " received_time DATETIME,"
-					+ " delivery_status VARCHAR(255) " + " )";
 			statement.execute(sql);
 
 			//populating data table which will contain mobile operator data, i.e ranges, operators, regions
@@ -176,6 +151,32 @@ public class IndianMobileOperators {
 		}
 	}
 	
+	
+	/**
+	 * @param connection : Connection to the database
+	 * @throws Exception
+	 * This will create 'messages' table and further call for method to populate it
+	 */
+	public static void createMessagesTable(Connection connection) throws Exception {
+		try  {
+			Statement statement = connection.createStatement();
+
+		
+			log.info("Creating tables messages"); //creating messages table which will contain messages and their details.
+			String sql = "CREATE TABLE messages " + "(sms_From BIGINT, " + " sms_to BIGINT, " + " message VARCHAR(255),"
+					+ " from_Operators VARCHAR(255), " + " from_region VARCHAR(255), " + " to_Operators VARCHAR(255), "
+					+ " to_region VARCHAR(255)," + " sent_time DATETIME," + " received_time DATETIME,"
+					+ " delivery_status VARCHAR(255) " + " )";
+			statement.execute(sql);
+
+			//populating data table which will contain mobile operator data, i.e ranges, operators, regions
+			populateMessages(connection);  //comment this line and uncomment //populateMessagesTable(connection); if inputs are needed to be taken in console. 
+			//populateMessagesTable(connection); //comment this line and uncomment //populateMessages(connection); if pre-defined inputs are required. 
+			
+		}catch(Exception e) {
+			throw new Exception(e+ "	Exception occured while creating tables");
+		}
+	}
 	
 	
 	/**
@@ -232,8 +233,7 @@ public class IndianMobileOperators {
 			ps.executeBatch();
 			log.info("Table mobile_operators populated");
 
-			populateMessages(connection);  //comment this line and uncomment //populateMessagesTable(connection); if inputs are needed to be taken in console. 
-			//populateMessagesTable(connection); //comment this line and uncomment //populateMessages(connection); if pre-defined inputs are required. 
+		
 		} catch (Exception e) {
 			throw new Exception(e+ "	Exception occured while populating mobile_operator tables");
 		}
@@ -367,90 +367,165 @@ public class IndianMobileOperators {
 	 * @throws Exception
 	 * following method executes the queries in the assignment 
 	 */
-	public static void executeAssignmentQueries(Connection connection, String databaseName) throws Exception {
-		try {
-			Statement statement = connection.createStatement();
+	public static void executeAssignmentQueries(Connection connection) throws Exception {
+		
+//			Statement statement = connection.createStatement();
+//
+//			String selectDatabase = "USE " + databaseName; //selecting database
+//		    statement.executeUpdate(selectDatabase);
+//		    log.info("Database selected successfully");   
+//		    log.info("**************************************");
+//		    
+//		    
+//			// print messages from a given number
+//			log.info("Query 1: Print all messages sent from a given number. ");
+//			String query = "Select message from messages where sms_from=7018648324";
+//			ResultSet rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			//print messages to a given number
+//			log.info("Query 2: Print all messages to a given number. ");
+//			query = "Select message from messages where sms_to=9878349412";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			//Print all messages from a given number to a given number
+//			log.info("Query 3: Print all messages sent between two years. ");
+//			query = "Select message from messages where YEAR(sent_time) BETWEEN 2021 AND 2022";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			// Print all messages received by given number from punjab number
+//			log.info("Query 4: Print all messages receieved by given number from punjab number. ");
+//			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab'";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			//Print all messages received by given number from airtel punjab number.
+//			log.info("Query 5: Print all messages receieved by given number from airtel punjab number. ");
+//			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab' AND from_Operators='Airtel'";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			//Print all messages sent by 98786912**
+//			log.info("Query 6: Print all messages sent by 98786912** . ");
+//			query = "Select message from messages where sms_from>9878691200 AND sms_from<=9878691299";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//
+//			//Print all messages sent from punjab but failed .
+//			log.info("Query 7: Print all messages sent from punjab but failed . ");
+//			query = "Select message from messages where from_region='Punjab' AND delivery_status='Failed'";
+//			rs = statement.executeQuery(query);
+//			while (rs.next()) {
+//				log.info("Message : " + rs.getString("message"));
+//			}
+//
+//			log.info("**************************************");
+//			
+//			
+			
+			try(Scanner sc = new Scanner(System.in);){
+			int userChoice;
+			
+			do {
+			
+				log.info("Enter the number with respect to the operation : ");
+				log.info("***************************************************************************************");
+				log.info("(1) Enter 1 to Print all messages sent from a given number. ");
+				log.info("(2) Enter 2 to Print all messages to a given number. ");
+				log.info("(3) Enter 3 to Print all messages sent between two years. ");
+				log.info("(4) Enter 4 to Print all messages receieved by given number from punjab number. ");
+				log.info("(5) Enter 5 to Print all messages receieved by given number from airtel punjab number. ");
+				log.info("(6) Enter 6 to Print all messages sent by 98786912**, (Where ** could be any two digits). ");
+				log.info("(7) Enter 7 to Print all messages sent from punjab but failed . ");
+				log.info("(8) Enter 0 to exit. ");
+				log.info("***************************************************************************************");
+				userChoice = sc.nextInt(); 
+				
+				if(userChoice==1) {
 
-			String selectDatabase = "USE " + databaseName; //selecting database
-		    statement.executeUpdate(selectDatabase);
-		    log.info("Database selected successfully");   
-		    log.info("**************************************");
-		    
-		    
-			// print messages from a given number
-			log.info("Query 1: Print all messages sent from a given number. ");
-			String query = "Select message from messages where sms_from=7018648324";
-			ResultSet rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			//print messages to a given number
-			log.info("Query 2: Print all messages to a given number. ");
-			query = "Select message from messages where sms_to=9878349412";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			//Print all messages from a given number to a given number
-			log.info("Query 3: Print all messages sent between two years. ");
-			query = "Select message from messages where YEAR(sent_time) BETWEEN 2021 AND 2022";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			// Print all messages received by given number from punjab number
-			log.info("Query 4: Print all messages receieved by given number from punjab number. ");
-			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab'";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			//Print all messages received by given number from airtel punjab number.
-			log.info("Query 5: Print all messages receieved by given number from airtel punjab number. ");
-			query = "Select message from messages where sms_to=7018648324 AND from_Region='Punjab' AND from_Operators='Airtel'";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			//Print all messages sent by 98786912**
-			log.info("Query 6: Print all messages sent by 98786912** . ");
-			query = "Select message from messages where sms_from>9878691200 AND sms_from<=9878691299";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
-
-			//Print all messages sent from punjab but failed .
-			log.info("Query 7: Print all messages sent from punjab but failed . ");
-			query = "Select message from messages where from_region='Punjab' AND delivery_status='Failed'";
-			rs = statement.executeQuery(query);
-			while (rs.next()) {
-				log.info("Message : " + rs.getString("message"));
-			}
-
-			log.info("**************************************");
+					messagesSentFromNumber();
+				}else if(userChoice ==2) {
+					
+					messagesSentToNumber();
+				}else if(userChoice ==3) {
+					
+					messageSentBetweenTwoYears();
+				}else if(userChoice ==4) {
+					
+					 messageReceivedFromPunjab();
+				}else if(userChoice ==5) {
+					
+					messageReceivedFromAirtelPunjab();
+				}else if(userChoice ==6) {
+					
+					messageSentBy98786912();
+				}else if(userChoice ==7) {
+					
+					messageFromPunjabFailed();
+				}else if(userChoice ==0) {
+					log.info("You have entered 0, Exiting");
+					break;
+				}else {
+					log.info("You have entered "+ userChoice+ " which is a wrong input.");
+				}
+				
+			}while(true); 
+				
+		
 
 		}catch(Exception e) {
 			log.fatal(e+ "	Exception has occured while executing assignment queries");
 		}
 	}
+	
+	public static void messagesSentFromNumber() {
+		log.info("You have entered 1");
+	}
+	public static void messagesSentToNumber() {
+		log.info("You have entered 2");
+	}
+	public static void messageSentBetweenTwoYears() {
+		log.info("You have entered 3");
+	}
+	public static void messageReceivedFromPunjab() {
+		log.info("You have entered 4");
+	}
+	public static void messageReceivedFromAirtelPunjab() {
+		log.info("You have entered 5");
+	}
+	public static void messageSentBy98786912() {
+		log.info("You have entered 6");
+	}
+	public static void messageFromPunjabFailed() {
+		log.info("You have entered 7");
+	}
+	
 	
 }
 		
