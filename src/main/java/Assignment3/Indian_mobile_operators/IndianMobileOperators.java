@@ -285,7 +285,7 @@ public class IndianMobileOperators {
 		
 		BufferedReader br=new BufferedReader(new InputStreamReader(System.in));  
 		
-		System.out.println("Enter the number of messages : ");
+		log.info("Enter the number of messages : ");
 		int numberOfMessages = Integer.parseInt(br.readLine());  // reading number of messages
 		
 		long senderNumber;
@@ -296,13 +296,13 @@ public class IndianMobileOperators {
 		//Entering messages by taking input in the console
 		for(int i=1;i<=numberOfMessages;i++) {
 			
-			System.out.println("Enter the Sender's phone number : ");
+			log.info("Enter the Sender's phone number : ");
 			senderNumber= Long.parseLong(br.readLine());
 			
-			System.out.println("Enter the Receiver's phone number : ");
+			log.info("Enter the Receiver's phone number : ");
 			receiverNumber= Long.parseLong(br.readLine());
 			
-			System.out.println("Enter the message : ");
+			log.info("Enter the message : ");
 			message = br.readLine();  
 		
 			//split the phone number to get first 5 character to check the range an operator of the numbers
@@ -325,7 +325,7 @@ public class IndianMobileOperators {
 			String region2=rs2.getString(2);
 	
 			
-			System.out.println("Enter the delivery status : ");
+			log.info("Enter the delivery status : ");
 			deliveryStatus = br.readLine();  
 
 			//setting fields for prepared statement
@@ -339,7 +339,7 @@ public class IndianMobileOperators {
 			ps.setString(8, deliveryStatus);
 			
 			ps.addBatch();
-			System.out.println("**********************");
+			log.info("**********************");
 		}
 		
 		ps.executeBatch(); 
@@ -347,7 +347,7 @@ public class IndianMobileOperators {
 		
 		//setting received_time as NULL for failed delivery_status 
 		int result=statement.executeUpdate("UPDATE messages SET received_time=NULL where delivery_status='Failed'");  
-		System.out.println(result+" records affected"); 
+		log.info(result+" records affected"); 
 		
 		}catch(Exception e) {
 			throw new Exception(e+ "	Exception occured while populating messages tables");
