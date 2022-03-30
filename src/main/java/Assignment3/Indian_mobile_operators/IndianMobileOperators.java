@@ -26,12 +26,14 @@ You have to design database and then write Java code to fullfil all the requirem
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+
+
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 
@@ -44,6 +46,9 @@ public class IndianMobileOperators {
 
 	public static void main(String[] args) throws Exception {
 		try {
+			
+			
+		
 			// initialize resources
 			initializeResource();
 			 // read url value from config.properties
@@ -53,7 +58,7 @@ public class IndianMobileOperators {
 			 // read password value from config.properties
 			String password = ResourceInitializer.getResourceValue("password");
 
-		
+			//getting connection to the server
 			Connection connection = DriverManager.getConnection(url, username, password);
 			
 			// check for Table existence, create and populate if not found.
@@ -192,7 +197,6 @@ public class IndianMobileOperators {
 		try  {
 			Statement statement = connection.createStatement();
 
-		
 			log.info("Creating tables messages"); //creating messages table which will contain messages and their details.
 			String sql = "CREATE TABLE messages " + "(sms_From BIGINT, " + " sms_to BIGINT, " + " message VARCHAR(255),"
 					+ " sent_time DATETIME," + " received_time DATETIME,"
@@ -216,32 +220,26 @@ public class IndianMobileOperators {
 	 */
 	public static void populateOperatorRangeTable(Connection connection) throws Exception {
 	
-		try (PreparedStatement ps = connection.prepareStatement("insert into operator_range values(?,?)");) {
+		
+		try (PreparedStatement preparedStatement = connection.prepareStatement("insert into operator_range values(?,?)");) {
+			//operatorMap contains ranges of mobile operators
+			 HashMap<Integer, String> operatorMap = new HashMap<>();
+			 operatorMap.put(9872, "Airtel");
+			 operatorMap.put(9814, "Idea");
+			 operatorMap.put(7018, "Jio");
+			 operatorMap.put(9878, "BSNL");
+			 
+				// code below populates mobile_operators table with operator information
+				log.info("Adding Airtel, Idea, Jio, BSNL Information...");
+			 for (Map.Entry<Integer, String> entry : operatorMap.entrySet()) {
 
-			// code below populates mobile_operators table with operator information
-			log.info("Adding Airtel, Idea, Jio, BSNL Information...");
+				 preparedStatement.setInt(1, entry.getKey()); //entering range
+				 preparedStatement.setString(2, entry.getValue()); //entering operators
+				 preparedStatement.addBatch();
 
-				// adding airtel range
-				ps.setInt(1, 9872);
-				ps.setString(2, "Airtel");
-				ps.addBatch();
+				}
 
-				// adding Idea range
-				ps.setInt(1, 9814);
-				ps.setString(2, "Idea");
-				ps.addBatch();
-
-				// adding Jio range
-				ps.setInt(1, 7018);
-				ps.setString(2, "Jio");
-				ps.addBatch();
-
-				// adding BSNL range
-				ps.setInt(1, 9878);
-				ps.setString(2, "BSNL");
-				ps.addBatch();
-			
-			ps.executeBatch();
+			 preparedStatement.executeBatch();
 			log.info("Table operator_range populated");
 
 		
@@ -288,26 +286,34 @@ public class IndianMobileOperators {
 	 * below method populates messages table with pre-defined values
 	 */
 	public static void populateMessages(Connection connection) throws Exception {
+		
+		//arraylist containing insert queries for populating messages table.
+		ArrayList<String> insertQueries = new ArrayList<String>(); 
+		insertQueries.add("insert into messages values(9872900001, 9814900001,'This is message 2',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9872900001, 9814900001,'This is message 2',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(7018648324, 7018938283,'This is message 1',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9814183756, 9872623947,'This is message 3',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9814034342, 7018648324,'This is message 4',CURRENT_TIMESTAMP,NULL,'Failed')");
+		insertQueries.add("insert into messages values(9878691251, 9814538238,'This is message 5',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9872930493, 9878349412,'This is message 6',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(7018648324, 9878349412,'This is message 7',CURRENT_TIMESTAMP,NULL,'Failed')");
+		insertQueries.add("insert into messages values(9872727211, 9814902322,'This is message 8',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9878593493, 7018012820,'This is message 9',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9814723923, 7018723923,'This is message 10',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9878723484, 7018937289,'This is message 11',CURRENT_TIMESTAMP,NULL,'Failed')");
+		insertQueries.add("insert into messages values(7018648324, 9814434934,'This is message 12',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(7018648324, 9814434934,'This is message 13',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(7018648324, 9814434934,'This is message 14',CURRENT_TIMESTAMP,NULL,'Failed')");
+		insertQueries.add("insert into messages values(7018648324, 9814434934,'This is message 15',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+		insertQueries.add("insert into messages values(9872034342, 7018648324 ,'This is message 16',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
 		log.info("Inserting messages into messages table");
 		
 		try(Statement statement= connection.createStatement();){
 
-		statement.addBatch("insert into messages values(9872900001, 9814900001,'This is message 2',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 7018938283,'This is message 1',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814183756, 9872623947,'This is message 3',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814034342, 7018648324,'This is message 4',CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(9878691251, 9814538238,'This is message 5',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9872930493, 9878349412,'This is message 6',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9878349412,'This is message 7',CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(9872727211, 9814902322,'This is message 8',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9878593493, 7018012820,'This is message 9',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9814723923, 7018723923,'This is message 10',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9878723484, 7018937289,'This is message 11',CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 12',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 13',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 14',CURRENT_TIMESTAMP,NULL,'Failed')");
-		statement.addBatch("insert into messages values(7018648324, 9814434934,'This is message 15',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
-		statement.addBatch("insert into messages values(9872034342, 7018648324 ,'This is message 16',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'Received')");
+			//adding insert queries into the batch one by one from arraylist
+			for(int i=0;i<insertQueries.size();i++) {
+				statement.addBatch(insertQueries.get(i));
+			}
 		
 		statement.executeBatch();
 		}catch(Exception e) {
@@ -329,6 +335,7 @@ public class IndianMobileOperators {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));  
 			try(Scanner scReader = new Scanner(System.in);){
 			int userChoice;
+			boolean infiniteLoop=true;
 			
 			//infinite loop which will break if userChoice==0, otherwise will execute queries according to the selected number
 			do {
@@ -346,42 +353,46 @@ public class IndianMobileOperators {
 				log.info("***************************************************************************************");
 				userChoice = scReader.nextInt(); 
 				
-				if(userChoice==1) {
-					
-					messagesSentFromNumber(connection,statement,reader);
-				}else if(userChoice ==2) {
-					
-					messagesSentToNumber(connection,statement,reader);
-				}else if(userChoice ==3) {
-					
-					messageSentBetweenTwoYears(connection,statement,scReader);
-				}else if(userChoice ==4) {
-					
-					 messageReceivedFromPunjab(connection,statement,reader);
-				}else if(userChoice ==5) {
-					
-					messageReceivedFromAirtelPunjab(connection,statement,reader);
-				}else if(userChoice ==6) {
-					
-					messageSentBy98786912(connection,statement,reader,scReader);
-				}else if(userChoice ==7) {
-					
-					messageFromPunjabFailed(connection,statement,reader);
-				}else if(userChoice ==0) {
-					log.info("You have entered 0, execution ended.");
+				switch (userChoice) {
+
+				case 1:
+					messagesSentFromNumber(connection, statement, reader);
 					break;
-				}else {
-					log.info("You have entered "+ userChoice+ " which is a wrong input.");
+				case 2:
+					messagesSentToNumber(connection, statement, reader);
+					break;
+				case 3:
+					messageSentBetweenTwoYears(connection, statement, scReader);
+					break;
+				case 4:
+					messageReceivedFromPunjab(connection, statement, reader);
+					break;
+				case 5:
+					messageReceivedFromAirtelPunjab(connection, statement, reader);
+					break;
+				case 6:
+					messageSentByNumber(connection, statement, reader, scReader);
+					break;
+				case 7:
+					messageFromPunjabFailed(connection, statement, reader);
+					break;
+				case 0:
+					log.info("You have entered 0, execution ended.");
+					infiniteLoop = false;
+					break;
+				default:
+					log.info("You have entered " + userChoice + " which is a wrong input.");
 				}
+
+			}while(infiniteLoop==true); 
 				
-			}while(true); 
-				
-		
+			
 
 		}catch(Exception e) {
 			log.fatal(e+ "	Exception has occured while executing assignment queries");
 		}
 	}
+	
 	
 	/**
 	 * 
@@ -488,7 +499,7 @@ public class IndianMobileOperators {
 	 * @throws Exception
 	 * This function fetches message sent by 98786912 followed by two digit user inputs and received by a number
 	 */
-	public static void messageSentBy98786912(Connection connection, Statement statement,BufferedReader reader,Scanner scReader) throws Exception{
+	public static void messageSentByNumber(Connection connection, Statement statement,BufferedReader reader,Scanner scReader) throws Exception{
 		log.info("You have entered 6");
 		//sample input: 51 , 9814538238
 		log.info("Enter sender's last 2 digits : ");
